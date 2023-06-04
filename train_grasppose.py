@@ -37,6 +37,9 @@ if __name__ == '__main__':
     parser.add_argument('--exp_name', default = None, type=str,
                         help='experiment name')
 
+    parser.add_argument('--best_net', default = None, type=str,
+                        help='path to the pretrained_model to load')
+
 
     args = parser.parse_args()
 
@@ -54,7 +57,7 @@ if __name__ == '__main__':
         'base_dir': cwd,
         'work_dir': work_dir,
         'base_lr': args.lr,
-        'best_net': None,
+        'best_net': args.best_net,
         'gender': args.gender,
         'exp_name': args.exp_name,
     }

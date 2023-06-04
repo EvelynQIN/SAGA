@@ -43,13 +43,14 @@ def create_lineset(x_range, y_range, z_range):
 
     return gp_lines, gp_pcd
 
-def get_body_model(type, gender, batch_size,device='cuda',v_template=None):
+def get_body_model(body_model_path, type, gender, batch_size,device='cuda',v_template=None):
     '''
+    body_model_path: path to body_models
     type: smpl, smplx smplh and others. Refer to smplx tutorial
     gender: male, female, neutral
     batch_size: an positive integar
     '''
-    body_model_path = '../body_utils/body_models'
+    # body_model_path = '../body_utils/body_models'
     body_model = smplx.create(body_model_path, model_type=type,
                                     gender=gender, ext='npz',
                                     num_pca_comps=24,
@@ -71,7 +72,7 @@ def get_body_model(type, gender, batch_size,device='cuda',v_template=None):
     else:
         return body_model
 
-def get_body_mesh(smplxparams, gender, n_samples, device='cpu', color=None):
+def get_body_mesh(body_model_path, smplxparams, gender, n_samples, device='cpu', color=None):
     body_mesh_list = []
 
     for key in smplxparams.keys():
@@ -79,7 +80,7 @@ def get_body_mesh(smplxparams, gender, n_samples, device='cpu', color=None):
         smplxparams[key] = torch.tensor(smplxparams[key][:n_samples]).to(device)
 
 
-    bm = get_body_model('smplx', str(gender), n_samples, device=device)
+    bm = get_body_model(body_model_path, 'smplx', str(gender), n_samples, device=device)
     smplx_results = bm(return_verts=True, **smplxparams)
     verts = smplx_results.vertices.detach().cpu().numpy()
     face = bm.faces
@@ -95,7 +96,11 @@ def get_body_mesh(smplxparams, gender, n_samples, device='cpu', color=None):
 
     return body_mesh_list, smplx_results
 
-def get_object_mesh(obj, dataset, transl, global_orient, n_samples, device='cpu', rotmat=False):
+def get_object_mesh(dataset_folder, obj, dataset, transl, global_orient, n_samples, device='cpu', rotmat=False):
+    """
+    args:
+        dataset_folder: path to contact_meshes
+    """
     object_mesh_list = []
     global_orient_dim = 9 if rotmat else 3
 
@@ -103,7 +108,7 @@ def get_object_mesh(obj, dataset, transl, global_orient, n_samples, device='cpu'
     transl = torch.FloatTensor(transl).to(device)
 
     if dataset == 'GRAB':
-        mesh_base = '../dataset/contact_meshes'
+        mesh_base = dataset_folder
         # mesh_base = '/home/dalco/wuyan/data/GRAB/tools/object_meshes/contact_meshes'
         obj_mesh_base = o3d.io.read_triangle_mesh(os.path.join(mesh_base, obj + '.ply'))
     elif dataset == 'FHB':
@@ -182,3 +187,65 @@ def get_pcd(points, contact=None):
         pcd_list.append(pcd)
     return pcd_list
 
+def get_body_mesh_vf(body_model_path, smplxparams, gender, n_samples, device='cpu', color=None):
+    body_mesh_list = []
+
+    for key in smplxparams.keys():
+        # print(key, smplxparams[key].shape)
+        smplxparams[key] = torch.tensor(smplxparams[key][:n_samples]).to(device)
+
+
+    bm = get_body_model(body_model_path, 'smplx', str(gender), n_samples, device=device)
+    smplx_results = bm(return_verts=True, **smplxparams)
+    verts = smplx_results.vertices.detach().cpu().numpy()
+    face = bm.faces
+
+    return verts, np.asarray(face).astype(np.int64)
+
+def get_object_mesh_vf(dataset_folder, obj, dataset, transl, global_orient, n_samples, device='cpu', rotmat=False):
+    """
+    args:
+        dataset_folder: path to contact_meshes
+    """
+    object_mesh_list = []
+    global_orient_dim = 9 if rotmat else 3
+
+    global_orient = torch.FloatTensor(global_orient).to(device)
+    transl = torch.FloatTensor(transl).to(device)
+
+    if dataset == 'GRAB':
+        mesh_base = dataset_folder
+        # mesh_base = '/home/dalco/wuyan/data/GRAB/tools/object_meshes/contact_meshes'
+        obj_mesh_base = o3d.io.read_triangle_mesh(os.path.join(mesh_base, obj + '.ply'))
+    elif dataset == 'FHB':
+        mesh_base = '/home/dalco/wuyan/data/FHB/Object_models'
+        obj_mesh_base = o3d.io.read_triangle_mesh(os.path.join(mesh_base, '{}_model/{}_model.ply'.format(obj, obj)))
+    elif dataset == 'HO3D':
+        mesh_base = '/home/dalco/wuyan/data/HO3D/YCB_Video_Models/models'
+        obj_mesh_base = o3d.io.read_triangle_mesh(os.path.join(mesh_base, '{}/textured_simple.obj'.format(obj)))
+    elif dataset == 'ShapeNet':
+        mesh_base = '/home/dalco/wuyan/data/ShapeNet/ShapeNet_selected'
+        obj_mesh_base = o3d.io.read_triangle_mesh(os.path.join(mesh_base, '{}.obj'.format(obj)))
+        obj_mesh_base.scale(0.15, center=np.zeros((3, 1)))
+    else:
+        raise NotImplementedError
+
+    obj_mesh_base.compute_vertex_normals()
+    v_temp = torch.FloatTensor(obj_mesh_base.vertices).to(device).view(1, -1, 3).repeat(n_samples, 1, 1)
+    normal_temp = torch.FloatTensor(obj_mesh_base.vertex_normals).to(device).view(1, -1, 3).repeat(n_samples, 1, 1)
+    obj_model = ObjectModel(v_temp, normal_temp, n_samples)
+#     global_orient_dim = 9 if rotmat else 3
+    object_output = obj_model(global_orient.view(n_samples, global_orient_dim), transl.view(n_samples, 3), v_temp.to(device), normal_temp.to(device), rotmat)
+
+    object_verts = object_output[0].detach().squeeze().view(n_samples, -1, 3).cpu().numpy()
+    # object_vertex_normal = object_output[1].detach().squeeze().cpu().numpy()
+
+    # for i in range(n_samples):
+    #     mesh = o3d.geometry.TriangleMesh()
+    #     mesh.vertices = o3d.utility.Vector3dVector(object_verts[i])
+    #     mesh.triangles = obj_mesh_base.triangles
+    #     mesh.compute_vertex_normals()
+    #     mesh.paint_uniform_color(color_hex2rgb('#f59002'))   # orange
+    #     object_mesh_list.append(mesh)
+
+    return object_verts, np.asarray(obj_mesh_base.triangles)

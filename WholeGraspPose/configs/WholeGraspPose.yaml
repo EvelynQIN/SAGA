@@ -6,11 +6,11 @@ c_weights_path: null
 cuda_id: 0
 dataset_dir: null
 kl_coef: 0.005
-latentD: 16
-log_every_epoch: 10
+latentD: 16 # new latent dim
+log_every_epoch: 10 # 10 by default
 n_epochs: 100
-n_markers: 512
-n_neurons: 512
+n_markers: 512 # 512
+n_neurons: 512 # 512
 n_workers: 8
 reg_coef: 0.0005
 # rhm_path: null
@@ -28,11 +28,28 @@ robustkl: False
 kl_annealing: True
 kl_annealing_epoch: 100
 marker_weight: 1
-foot_weight: 0
+foot_weight: 0.1
 collision_weight: 0
-consistency_weight: 1
+consistency_weight: 1 # default 1
 dropout: 0.1
 obj_feature: 12
 pointnet_hc: 64
 continue_train: False
 data_representation: 'markers_143'     # 'joints' / 'markers_143' / 'markers_214' / 'markers_593'
+
+# flex params
+intersection_thresh: 0.005
+obstacle_obj2sbj: True
+obstacle_sbj2obj: True
+obstacle_sbj2obj_extra: 'connected_components'
+subsample_sbj: True
+adj_matrix_orig: './dataset/sbj/adj_matrix_original.npy'
+sbj_verts_simplified: './dataset/sbj/vertices_simplified_correspondences.npy'
+sbj_faces_simplified: './dataset/sbj/faces_simplified.npy'
+adj_matrix_simplified: './dataset/sbj/adj_matrix_simplified.npy'
+alpha_obstacle_in: 10.0 # weight of loss_obstacle_in
+alpha_obstacle_out: 1.0 # weight of loss_obstacle_out
+w_saga_contact: 10
+w_saga_collision: 10
+marker_rec_weight: 5
+init_lr_h: 0.001

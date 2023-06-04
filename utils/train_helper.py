@@ -54,7 +54,7 @@ def point2point_signed(
 
     # ch_dist = chd.ChamferDistance()
 
-    x_near, y_near, xidx_near, yidx_near = chd.ChamferDistance(x,y)
+    x_near, y_near, xidx_near, yidx_near = chd.ChamferDistance()(x,y)
 
     xidx_near_expanded = xidx_near.view(N, P1, 1).expand(N, P1, D).to(torch.long)
     x_near = y.gather(1, xidx_near_expanded)

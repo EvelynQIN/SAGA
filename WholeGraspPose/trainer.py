@@ -8,11 +8,14 @@ import json
 import pickle
 from datetime import datetime
 
+from tqdm import tqdm
 import numpy as np
 import torch
 import torch.nn.functional as F
 from ignite.contrib.metrics import ROC_AUC
-from tensorboardX import SummaryWriter
+# from tensorboardX import SummaryWriter
+from torch.utils.tensorboard import SummaryWriter
+
 from torch import nn, optim
 from torch.utils.data import DataLoader
 from utils.train_helper import EarlyStopping, point2point_signed
@@ -20,6 +23,9 @@ from utils.utils import makelogger, makepath, to_cpu
 
 from WholeGraspPose.data.dataloader import LoadData
 from WholeGraspPose.models.models import FullBodyGraspNet
+
+# # for log training info
+# import wandb
 
 
 class Trainer:
@@ -52,6 +58,19 @@ class Trainer:
             self.logger('tensorboard --logdir=%s' % summary_logdir)
             self.logger('Torch Version: %s\n' % torch.__version__)
             self.logger('Base dataset_dir is %s' % cfg.dataset_dir)
+            # summary_logdir = os.path.join(cfg.work_dir, cfg.exp_name)
+            # self.logger('[%s] - Started training GrabNet, experiment code %s' % (cfg.exp_name, starttime))
+            # self.logger('wandb --dir=%s' % summary_logdir)
+            # self.logger('Torch Version: %s\n' % torch.__version__)
+            # self.logger('Base dataset_dir is %s' % cfg.dataset_dir)
+            # wandb.init(
+            # project="SAGA",
+            # name=cfg.exp_name,
+            # config=cfg,
+            # sync_tensorboard=False,
+            # dir=summary_logdir,
+            # settings=wandb.Settings(start_method='fork')
+            # )
 
         use_cuda = torch.cuda.is_available()
         if use_cuda:
@@ -65,7 +84,8 @@ class Trainer:
 
         self.logger(cfg)
 
-        self.load_data(cfg, inference)
+        if not inference:
+            self.load_data(cfg, inference)
 
         self.full_grasp_net = FullBodyGraspNet(cfg).to(self.device)
 
@@ -161,7 +181,7 @@ class Trainer:
         train_loss_dict_net = {}
         torch.autograd.set_detect_anomaly(True)
 
-        for it, dorig in enumerate(self.ds_train):
+        for it, dorig in enumerate(tqdm(self.ds_train)):
             dorig = {k: dorig[k].to(self.device) for k in dorig.keys() if k!='smplxparams'}
 
             self.optimizer_net.zero_grad()
@@ -325,7 +345,8 @@ class Trainer:
 
         early_stopping_net = EarlyStopping(patience=8, trace_func=self.logger)
 
-        for epoch_num in range(self.start_epoch, n_epochs + 1):
+        epoch_list = range(self.start_epoch, n_epochs + 1)
+        for epoch_num in tqdm(epoch_list):
             self.logger('--- starting Epoch # %03d' % epoch_num)
             self.ROC_AUC_object.reset()
             self.ROC_AUC_marker.reset()
@@ -369,6 +390,36 @@ class Trainer:
                         self.save_net()
                     self.logger(eval_msg + ' ** ')
                     self.best_loss_net = eval_loss_dict_net['loss_total']
+
+                    # wandb.log({'epochs': self.epoch_completed})
+
+                    # wandb.log({'kl_loss/train_loss_kl': train_loss_dict_net['loss_kl'],
+                    #            'kl_loss/evald_loss_kl': eval_loss_dict_net['loss_kl']})
+                    
+                    # wandb.log({'total_rec_loss/train_loss_total': train_loss_dict_net['loss_total'],
+                    #           'total_rec_loss/evald_loss_total': eval_loss_dict_net['loss_total']})
+                    
+                    # wandb.log({'object_contact_rec_loss/train_loss_object_contact_rec': train_loss_dict_net['loss_object_contact_rec'],
+                    #           'object_contact_rec_loss/evald_loss_object_contact_rec': eval_loss_dict_net['loss_object_contact_rec']})
+                    
+                    # wandb.log({'markers_contact_rec_loss/train_loss_object_markers_rec': train_loss_dict_net['loss_markers_contact_rec'],
+                    #           'markers_contact_rec_loss/evald_loss_object_markers_rec': eval_loss_dict_net['loss_markers_contact_rec']})
+
+                    # wandb.log({'marker_rec_loss/train_loss_marker_rec': train_loss_dict_net['loss_marker_rec'],
+                    #           'marker_rec_loss/evald_loss_marker_rec': eval_loss_dict_net['loss_marker_rec']})
+                    
+                    # wandb.log({'consistency_o2h_loss/train_loss_consistency_o2h': train_loss_dict_net['loss_consistency_o2h'],
+                    #           'consistency_o2h_loss/evald_loss_consistency_o2h': eval_loss_dict_net['loss_consistency_o2h']})
+                    
+                    # wandb.log({'consistency_h2o_loss/train_loss_consistency_h2o': train_loss_dict_net['loss_consistency_h2o'],
+                    #           'consistency_h2o_loss/evald_loss_consistency_h2o': eval_loss_dict_net['loss_consistency_h2o']})
+                    
+                    # wandb.log({'AUC_object/train_roc_auc_object': train_roc_auc_object,
+                    #           'AUC_object/evald_roc_auc_object': eval_roc_auc_object})
+                    
+                    # wandb.log({'AUC_markers/train_roc_auc_markers': train_roc_auc_markers,
+                    #           'AUC_markers/eval_roc_auc_markers': eval_roc_auc_markers})
+                
 
                     self.swriter.add_scalars('loss_net/kl_loss',
                                              {
@@ -430,6 +481,8 @@ class Trainer:
                                              'eval_roc_auc_markers': eval_roc_auc_markers,
                                              },
                                              self.epoch_completed)
+                    
+
 
                     self.logger('object train_auc: %f, object eval_auc: %f' % (train_roc_auc_object, eval_roc_auc_object))
                     self.logger('markers train_auc: %f, markers eval_auc: %f' % (train_roc_auc_markers, eval_roc_auc_markers))

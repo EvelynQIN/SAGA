@@ -28,7 +28,7 @@ def load_object_data_random(object_name, n_samples):
 
     """Prepare transl/global_orient data"""
     """Example: randomly sample object height and orientation"""
-    transf_transl_list = torch.rand(n_samples) + 0.6   #### can be customized
+    transf_transl_list = torch.rand(n_samples) # + 0.6   #### can be customized
     global_orient_list = (np.pi)*torch.rand(n_samples) - np.pi/2   #### can be customized
     transl = torch.zeros(n_samples, 3)   # for object model which is centered at object
     transf_transl = torch.zeros(n_samples, 3)
@@ -65,6 +65,7 @@ def load_object_data_uniform_sample(object_name, n_samples):
     """Prepare transl/global_orient data"""
     """Example: uniformly sample object height and orientation (can be customized)"""
     transf_transl_list = torch.arange(n_samples)*1.0/(n_samples-1) + 0.5
+    transf_transl_list = torch.arange(n_samples)*1.0/(n_samples-1)
     global_orient_list = (2*np.pi)*torch.arange(n_samples)/n_samples
     n_samples = transf_transl_list.shape[0] * global_orient_list.shape[0]
     transl = torch.zeros(n_samples, 3)   # for object model which is centered at object
@@ -188,6 +189,7 @@ def pose_opt(grabpose, samples_results, n_random_samples, obj, gender, save_dir,
                             'contact_loss': 'contact',  # contact / prior / False
                             'logger': logger,
                             'data_type': 'markers_143',
+                            
                             }
     fittingop = FittingOP(fittingconfig)
 

@@ -5,8 +5,27 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+# for flex
+from psbody.mesh import Mesh
+
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 to_cpu = lambda tensor: tensor.detach().cpu().numpy()
+# from flex
+def get_ground(grnd_size=5, offset=0.0):
+    """
+    Return the mesh for ground.
+    :param grnd_size    (int)
+    :param offset       (int)
+    :return grnd_mesh   (psbody mesh)
+    """
+    d = offset
+    g_points = np.array([[-.2, -.2, d],
+                         [.2, .2, d],
+                         [.2, -0.2, d],
+                         [-.2, .2, d]])
+    g_faces = np.array([[0, 1, 2], [0, 3, 1]])
+    grnd_mesh = Mesh(v=[grnd_size, grnd_size, 1] * g_points, f=g_faces)
+    return grnd_mesh
 
 class Struct(object):
     def __init__(self, **kwargs):

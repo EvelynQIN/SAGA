@@ -81,7 +81,8 @@ class MarkerNet(nn.Module):
         self.enc_bn1 = nn.BatchNorm1d(in_feature + self.obj_cond_feature)
         self.enc_rb1 = ResBlock(in_cond + in_feature + int(in_feature/3) + self.obj_cond_feature, n_neurons)
         self.enc_rb2 = ResBlock(n_neurons + in_cond + in_feature + int(in_feature/3) + self.obj_cond_feature, n_neurons)
-
+        
+        # change var name to avoid load the corresponding weights from the pretrained model
         self.dec_rb1 = ResBlock(latentD + in_cond, n_neurons)
         self.dec_rb2_xyz = ResBlock(n_neurons + latentD + in_cond + self.obj_cond_feature, n_neurons)
         self.dec_rb2_p = ResBlock(n_neurons + latentD + in_cond, n_neurons)
@@ -131,6 +132,8 @@ class ContactNet(nn.Module):
 
         self.enc_pointnet = PointNetEncoder(self.hc, self.object_feature+1)
 
+        # change var name to avoid load weights from the pretrained model
+        # self.dec_fc1 = nn.Linear(self.latentD, self.hc*2)
         self.dec_fc1 = nn.Linear(self.latentD, self.hc*2)
         self.dec_bn1 = nn.BatchNorm1d(self.hc*2)
         self.dec_drop1 = nn.Dropout(0.1)
@@ -141,6 +144,8 @@ class ContactNet(nn.Module):
         self.dec_bn3 = nn.BatchNorm1d(self.hc*8)
         self.dec_drop3 = nn.Dropout(0.1)
 
+        # change var name to avoid load weights from the pretrained model
+        # self.dec_fc4 = nn.Linear(self.hc*8+self.latentD, self.hc*8)
         self.dec_fc4 = nn.Linear(self.hc*8+self.latentD, self.hc*8)
         self.dec_bn4 = nn.BatchNorm1d(self.hc*8)
         self.dec_drop4 = nn.Dropout(0.1)
@@ -208,6 +213,9 @@ class FullBodyGraspNet(nn.Module):
         # encoder fusion
         self.enc_fusion = ResBlock(cfg.n_markers+self.cfg.pointnet_hc*8, cfg.n_neurons)
 
+        # change var name to avoid load the corresponding weight from the pretrained model
+        # self.enc_mu = nn.Linear(cfg.n_neurons, cfg.latentD)
+        # self.enc_var = nn.Linear(cfg.n_neurons, cfg.latentD)
         self.enc_mu = nn.Linear(cfg.n_neurons, cfg.latentD)
         self.enc_var = nn.Linear(cfg.n_neurons, cfg.latentD)
 

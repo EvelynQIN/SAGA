@@ -1,0 +1,14 @@
+#!/bin/bash
+
+#SBATCH -n 8                              # Number of cores
+#SBATCH --time=40:00:00                    # hours:minutes:seconds
+#SBATCH --mem-per-cpu=30000
+#SBATCH --tmp=4000                         # per node!!
+#SBATCH  --gpus=rtx_2080_ti:1              # Ohter options are: --gpus=gtx_1080_ti:1  --gpus=rtx_2080_ti:1
+#SBATCH --job-name=train_saga_female
+#SBATCH --output=./results/train_saga_female/train.out
+#SBATCH --error=./results/train_saga_female/train.err
+
+source /cluster/scratch/yaqqin/venvs/grasp_venv_113/bin/activate
+module load gcc/8.2.0 python_gpu/3.10.4 open3d/0.9.0 boost/1.74.0 eth_proxy
+python train_grasppose.py --data_path ./dataset/GraspPose --gender female --exp_name train_saga_female_1024_n_neuron --n-workers 2 --batch-size 64 --lr 0.0005
