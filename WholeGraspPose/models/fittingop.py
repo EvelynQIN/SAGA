@@ -141,8 +141,8 @@ class FittingOP:
         body_param['betas'] = self.betas
         body_param['body_pose'] = self.vposer.decode(self.vpose_rec,
                                            output_type='aa').view(self.batch_size, -1)
-        body_param['left_hand_pose'] = self.hand_pose[:,:self.hand_ncomps]
-        body_param['right_hand_pose'] = self.hand_pose[:,self.hand_ncomps:]
+        body_param['left_hand_pose'] = self.hand_pose[:,:self.hand_ncomps] # (bs, 24)
+        body_param['right_hand_pose'] = self.hand_pose[:,self.hand_ncomps:] # (bs, 24)
         body_param['leye_pose'] = self.eye_pose[:,:3]
         body_param['reye_pose'] = self.eye_pose[:,3:]
 

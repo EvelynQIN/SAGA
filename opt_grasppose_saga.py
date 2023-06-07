@@ -206,6 +206,7 @@ def pose_opt(grabpose, samples_results, n_random_samples, obj, gender, save_dir,
                 data['contact'][key] = np.vstack(data['contact'][key])
 
     np.savez(os.path.join(save_dir, 'saga_fitting_results.npz'), **save_data_gen)
+    return save_data_gen
 
 # flex opt
 # =============Main classes====================================================================
@@ -232,7 +233,7 @@ class Optimize():
        return obstacles_info
 
 
-    def perform_optim(self, transl_init, global_orient_init, a_init, 
+    def perform_optim(self, transl_init, global_orient_init,
                       sbj_pose_init, wrist_global_orient_init, wrist_transl_init, hand_pose_init,
                       obstacles_dict, object_mesh, obj_transl, obj_global_orient, obj_name,
                       model_name='flex'):
@@ -265,7 +266,6 @@ class Optimize():
                             cfg=self.cfg,
                             transl_init=transl_init,
                             global_orient_init=global_orient_init,
-                            a_init=a_init,
                             sbj_pose_init=sbj_pose_init, 
                             wrist_global_orient_init=wrist_global_orient_init,
                             wrist_transl_init=wrist_transl_init, 
@@ -301,19 +301,19 @@ class Optimize():
         """
 
         # random initialize translation & global orientation
-        t_inits = (test_pose[0] + torch.rand(bs, 3) * 0.5).to(self.device)
-        g_inits = recompose_angle(torch.rand(bs) * math.pi, torch.zeros(bs), torch.ones(bs) * 1.5, 'aa').to(self.device)
-        a_inits = torch.rand([bs, 3]) * 360                                                                 # (bs, 3)                                                              
-        a_inits = a_inits.to(self.device)
+        t_inits = (test_pose[0] + torch.rand(bs, 3) * 0.5).to(self.device) # (bs, 3)     
+        g_inits = recompose_angle(torch.rand(bs) * math.pi, torch.zeros(bs), torch.ones(bs) * 1.5, 'aa').to(self.device) # (bs, 3)       
+        # a_inits = torch.rand([bs, 3]) * 360                                                                 # (bs, 3)                                                              
+        # a_inits = a_inits.to(self.device)
 
         # initialize body params using the fitting results from saga opt
-        sbj_pose_init = torch.FloatTensor(fitting_results['body'][()]['body_pose']).to(self.device)
-        wrist_global_orient_init =  torch.FloatTensor(fitting_results['body'][()]['wrist_joint_global_orient']).to(self.device)
-        wrist_transl_init = torch.FloatTensor(fitting_results['body'][()]['wrist_joint_transl']).to(self.device)
-        hand_pose_init = torch.FloatTensor(fitting_results['body'][()]['right_hand_pose']).to(self.device)
+        sbj_pose_init = torch.FloatTensor(fitting_results['body']['body_pose']).repeat(bs, 1).to(self.device) # (bs, 63)              
+        wrist_global_orient_init =  torch.FloatTensor(fitting_results['body']['wrist_joint_global_orient']).repeat(bs, 1).to(self.device) # (bs, 3)            
+        wrist_transl_init = torch.FloatTensor(fitting_results['body']['wrist_joint_transl']).repeat(bs, 1).to(self.device) # (bs, 3)          
+        hand_pose_init = torch.FloatTensor(fitting_results['body']['right_hand_pose']).repeat(bs, 1).to(self.device) # (bs, 45)          
 
         params_init = {
-            'a_inits': a_inits, 't_inits': t_inits, 'g_inits': g_inits, 'sbj_pose_init': sbj_pose_init, 
+            't_inits': t_inits, 'g_inits': g_inits, 'sbj_pose_init': sbj_pose_init, 
             'wrist_global_orient_init': wrist_global_orient_init, ' wrist_transl_init':  wrist_transl_init, 'hand_pose_init': hand_pose_init
         }
 
@@ -341,12 +341,12 @@ class Optimize():
         # NOTE: for above
         #   - a_inits stores the random rotation that we used to get obj_bps.
         #   - We will use a_inits later to tranform the predicted hand pose back in the correct coordinate system
-        params_init = self.get_inits(test_pose, bs)
+        params_init = self.get_inits(test_pose, bs, fitting_results)
 
         # (*) Perform main optimization for 4 initializations.
         start_time = time.time()
         obj_transl, obj_global_orient = test_pose[0].to(self.device), test_pose[1].to(self.device)
-        curr_res = self.perform_optim(params_init['t_inits'], params_init['g_inits'], params_init['a_inits'],
+        curr_res = self.perform_optim(params_init['t_inits'], params_init['g_inits'],
                                       params_init['sbj_pose_init'], params_init['wrist_global_orient_init'], params_init[' wrist_transl_init'],
                                       params_init['hand_pose_init'],
                                       obstacles_dict, object_mesh, obj_transl, obj_global_orient, obj_name, model_name)
@@ -427,7 +427,8 @@ if __name__ == '__main__':
     flex_config = {
         'gender': args.gender,
         'exp_name': args.exp_name,
-        'obj_name': args.object
+        'obj_name': args.object,
+        'batch_size': 500
     }
     cfg_flex = Config(default_cfg_path=args.flex_cfg_path, **flex_config)       # Create config for flex optimization
 
@@ -455,7 +456,8 @@ if __name__ == '__main__':
     final_results = []
     for i in range(cfg_flex.topk):
         final_results.append({
-            'human_vertices': res['human_vertices'][i].detach().cpu().numpy(),
+            'human_vertices': res['human_vertices'][i].detach(
+    ).cpu().numpy(),
             'pose': res['pose_final'][i].reshape(21, 3).detach().cpu().numpy(),
             'transl': res['transl_final'][i].detach().cpu().numpy(),
             'global_orient': aa2rotmat(res['global_orient_final'])[i].view(3, 3).detach().cpu().numpy(),

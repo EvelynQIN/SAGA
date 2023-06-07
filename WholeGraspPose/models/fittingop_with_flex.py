@@ -152,7 +152,7 @@ class FittingOP:
 
         # qyq: add the global translation & orientation of the wrist
         # TODO: solve the global orientation of the writst -> or directly optimize over it
-        body_param['wrist_joint_transl'] = joints[:, 21:22, :]
+        body_param['wrist_joint_transl'] = joints[:, 21:22, :].squeeze(dim=1)
         body_param['wrist_joint_global_orient'] = body_param['body_pose'][:, -3:] # (b, 3)
 
         body_markers_rec = verts_full[:, self.markers_143, :]
@@ -351,7 +351,7 @@ class FittingOP:
                         tmp_smplxparams['leye_pose'] = copy.deepcopy(self.eye_pose).detach()[:,:3]
                         tmp_smplxparams['reye_pose'] = copy.deepcopy(self.eye_pose).detach()[:,3:]
                         
-                        tmp_smplxparams['wrist_joint_transl'] = copy.deepcopy(body_param['wrist_joint_transl']).detach()
+                        tmp_smplxparams['wrist_joint_transl'] = body_param['wrist_joint_transl'].detach()
                         tmp_smplxparams['wrist_joint_global_orient'] = tmp_smplxparams['body_pose'][:, -3:]# (b, 3)
                         
                         tmp_markers_fit = markers_fit
@@ -388,7 +388,7 @@ class FittingOP:
                 smplxparams['leye_pose'] = copy.deepcopy(self.eye_pose).detach()[:,:3]
                 smplxparams['reye_pose'] = copy.deepcopy(self.eye_pose).detach()[:,3:]
 
-                smplxparams['wrist_joint_transl'] = copy.deepcopy(body_param['wrist_joint_transl']).detach()
+                smplxparams['wrist_joint_transl'] = body_param['wrist_joint_transl'].detach()
                 smplxparams['wrist_joint_global_orient'] = smplxparams['body_pose'][:, -3:]# (b, 3)
                 # print('handpose:', self.hand_pose)
 

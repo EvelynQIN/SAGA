@@ -1,6 +1,6 @@
 # from FLEX
 
-from registry import registry
+from utils.registry import registry
 from torch import nn as nn
 
 

@@ -60,7 +60,7 @@ class Losses(object):
         self.interesting = dict(np.load(cfg.interesting_pth))                                      # dict of ['interesting_vertices', 'interesting_vertices_larger']
 
 
-    def get_rh_match_loss(self, transl, global_orient, angle, extras, sbj_pose, wrist_global_orient, wrist_transl, hand_pose):
+    def get_rh_match_loss(self, transl, global_orient, extras, sbj_pose, wrist_global_orient, wrist_transl, hand_pose):
         """
         Get full-body of human based on pose and parameters (transl, global_orient), along with right-hand pose obtained from rh-grasping model.
         Compute loss between predicted joint/vertex locations versus expected for right hand.
@@ -69,7 +69,6 @@ class Losses(object):
         :param transl           (torch.Tensor)
         :param global_orient    (torch.Tensor)
         :param w                (torch.Tensor) --> deleted
-        :param angle            (torch.Tensor) --> deleted ???
         :param extras           (dict) - keys ['obj_bps, 'obj_bps_verts', 'obj_transl'] (stuff that is not optimized over and is necessary for loss computation)
         :param sbj_pose         (torch.Tensor) - (bs, 63)
         :param wrist_global_orient (torch.Tensor) - (bs, 3)
@@ -82,7 +81,7 @@ class Losses(object):
         :return rv              (torch.Tensor) - (bs, 778, 3)
         :return rf              (torch.Tensor) - (1538, 3)
         """
-        bs = sbj_pose.shape[0]
+        bs = transl.shape[0]
 
         # 1. Get the MANO output
         rh_out = self.rh_m(global_orient = wrist_global_orient, 
@@ -93,9 +92,7 @@ class Losses(object):
         vertices_constraint = rh_out.vertices                                                                             # (b, 778, 3)
 
         # 2. Transform appropriately.
-        angle_rotmat = euler_torch(360*angle)  # TODO: what is angle?
-        obj_global_orient_rotmat = aa2rotmat(extras['obj_global_orient'].reshape(1,1,1,3)).reshape(1,3,3).repeat(bs,1,1)  # (bs, 3, 3)
-        R = torch.bmm(obj_global_orient_rotmat, torch.inverse(angle_rotmat)).to(self.device)                              # (b, 3, 3)
+        R = aa2rotmat(extras['obj_global_orient'].reshape(1,1,1,3)).reshape(1,3,3).repeat(bs,1,1).to(self.device)   # (bs, 3, 3)
         t = extras['obj_transl'].repeat(bs,1)                                                                             # (b, 3)
         joints_constraint = local2global(joints_constraint, R, t)                                                         # (b, 16, 3)
         vertices_constraint = local2global(vertices_constraint, R, t)                                                     # (b, 778, 3)
@@ -356,7 +353,7 @@ class Losses(object):
         return wrist_loss
 
 
-    def gan_loss(self, transl, global_orient, a,  
+    def gan_loss(self, transl, global_orient,
                  sbj_pose, wrist_global_orient, wrist_transl, hand_pose,
                  extras={},
                  alpha_lowermost=0.0, alpha_rh_match=1.0,
@@ -369,11 +366,8 @@ class Losses(object):
             (3) Human-object penetration loss.
             (4) Human-obstacle penetration loss.
 
-        :param z             (torch.Tensor) - (1, 32)
         :param transl        (list of 3 torch.Tensors) - each of shape (1,)
         :param global_orient (list of 3 torch.Tensors) - each of shape (1,)
-        :param w             (torch.Tensor) - (1, 16)
-        :param a             (torch.Tensor) - (1, 3, 3)
         :param extras        (dict)         - keys ['ov', 'obj_normals'] (stuff that is not optimized over and that can be copied over from GT and is necessary for loss computation)
 
         :return loss_dict    (dict of torch.Tensor) - each single loss value
@@ -391,7 +385,7 @@ class Losses(object):
             global_orient = recompose_angle(global_orient1, global_orient2, global_orient3, 'aa')
 
         # (*) Joint loss.
-        rh_match_loss, bm_output, rv, rf = self.get_rh_match_loss(transl, global_orient, a, extras, sbj_pose, wrist_global_orient, wrist_transl, hand_pose)
+        rh_match_loss, bm_output, rv, rf = self.get_rh_match_loss(transl, global_orient, extras, sbj_pose, wrist_global_orient, wrist_transl, hand_pose)
 
         # (*) RHand-obstacle(s) penetration loss.
         rh_obstacle_loss_in = rh_obstacle_loss_out = torch.zeros_like(rh_match_loss)
@@ -443,7 +437,6 @@ class FLEX(nn.Module):
         cfg,
         transl_init,
         global_orient_init,
-        a_init,
         sbj_pose_init, 
         wrist_global_orient_init,
         wrist_transl_init, 
@@ -469,7 +462,8 @@ class FLEX(nn.Module):
         )
 
         # (2) Translation.
-        transl_param_init = transl_init.detach().clone()
+        transl_param_init = transl_init.detach().clone() # (bs, 3)
+        # print(f"shape of transl_param_init is {transl_param_init.shape}")
         self.transl_x = nn.Parameter(
             transl_param_init[:, 0], requires_grad=requires_grad
         )
@@ -510,11 +504,6 @@ class FLEX(nn.Module):
             wrist_global_orient_param_init, requires_grad=requires_grad
         )
 
-        # (7) Angle for Object Pose for Hand Grasping.
-        a_param_init = a_init.detach().clone()
-        self.angle = nn.Parameter(
-            a_param_init, requires_grad=requires_grad
-        )
 
         # Load pre-trained pose-ground prior model.
         self.pose_ground_prior = registry.get_class('Regress')(cfg).to(self.device)
@@ -549,7 +538,7 @@ class FLEX(nn.Module):
             return pred
 
 
-    def get_dout(self, best_transl, best_orient, best_angle, best_sbj_pose, best_wrist_global_orient, best_wrist_transl, best_hand_pose, extras):
+    def get_dout(self, best_transl, best_orient, best_sbj_pose, best_wrist_global_orient, best_wrist_transl, best_hand_pose, extras):
         """
         Use optimization parameters (t, g, z, w) to visualize corresponding mesh results.
 
@@ -570,8 +559,6 @@ class FLEX(nn.Module):
         rh_m = self.losses.rh_m  # MANO
         sbj_m = self.losses.sbj_m # SMPLX
 
-        angle_rotmat = euler_torch(360*best_angle)
-                                                                           # dict of ['global_orient', 'hand_pose', 'transl', 'fullpose']
         rh_out = rh_m(
             global_orient = best_wrist_global_orient, 
             transl = best_wrist_transl,
@@ -579,8 +566,7 @@ class FLEX(nn.Module):
         )
         vertices_constraint = rh_out.vertices
 
-        obj_global_orient_rotmat = aa2rotmat(self.extras['obj_global_orient'].reshape(1,1,1,3)).reshape(1,3,3).repeat(self.bs,1,1)  # (b, 3, 3)
-        R = torch.bmm(obj_global_orient_rotmat, torch.inverse(angle_rotmat)).to(self.device)                                        # (b, 3, 3)
+        R = aa2rotmat(self.extras['obj_global_orient'].reshape(1,1,1,3)).reshape(1,3,3).repeat(self.bs,1,1).to(self.device)  # (b, 3, 3)
         t = self.extras['obj_transl'].repeat(self.bs,1)                                                                             # (b, 3)
         rh_verts = local2global(vertices_constraint, R, t)                                                                          # (bs, 778, 3)
         dout['rh_verts'] = rh_verts                                                                                                 # (bs, 778, 3)
@@ -611,7 +597,6 @@ class FLEX(nn.Module):
             self.hand_pose.requires_grad = True if 'h' in mode else False
             self.wrist_transl.requires_grad = True if 'w' in mode else False
             self.wrist_global_orient.requires_grad = True if 'r' in mode else False
-            self.angle.requires_grad = True if 'a' in mode else False
             self.transl_z.requires_grad, self.global_orient2.requires_grad, self.global_orient3.requires_grad = False, False, False        # (z, pitch, roll)
             if 'tg' in mode or 'gt' in mode:
                 # Optimize over 3 values (transl_x, transl_y, yaw)
@@ -627,7 +612,6 @@ class FLEX(nn.Module):
             pass
 
         loss = self.losses.gan_loss(transl=[self.transl_x, self.transl_y, self.transl_z], global_orient=[self.global_orient1, self.global_orient2, self.global_orient3],
-                                    a=self.angle, 
                                     sbj_pose=self.sbj_pose, wrist_global_orient=self.wrist_global_orient, wrist_transl=self.wrist_transl, hand_pose=self.hand_pose,
                                     extras=self.extras,
                                     alpha_lowermost=alpha_lowermost, alpha_rh_match=alpha_rh_match, alpha_obstacle_in=alpha_obstacle_in, alpha_obstacle_out=alpha_obstacle_out, alpha_gaze=alpha_gaze,
@@ -791,7 +775,6 @@ def optimize_findz(
     cfg,
     transl_init,
     global_orient_init,
-    a_init,
     sbj_pose_init, 
     wrist_global_orient_init,
     wrist_transl_init, 
@@ -836,7 +819,6 @@ def optimize_findz(
         cfg=cfg,
         transl_init=transl_init,
         global_orient_init=global_orient_init,
-        a_init=a_init,
         sbj_pose_init=sbj_pose_init, 
         wrist_global_orient_init=wrist_global_orient_init,
         wrist_transl_init=wrist_transl_init, 
@@ -869,7 +851,6 @@ def optimize_findz(
         loop = range(num_iterations) if display else range(num_iterations)
 
     # Initialization.
-    best_angle = torch.zeros(bs,3).to(device)
     best_t1, best_t2, best_t3 = torch.zeros(bs).to(device), torch.zeros(bs).to(device), torch.zeros(bs).to(device)
     best_go1, best_go2, best_go3 = torch.zeros(bs).to(device), torch.zeros(bs).to(device), torch.zeros(bs).to(device)
     best_sbj_pose = torch.zeros(bs, 63).to(device)
@@ -906,7 +887,7 @@ def optimize_findz(
         for sid, stage_idx in enumerate(stages):
 
             # --> Set learning rate for this stage.
-            if model_name is 'flex':
+            if model_name == 'flex':
                 params = stage_params[sid]
                 for i, g in enumerate(optimizer.param_groups):
                     if i == 1: g['lr'] = float(stage_lrs[sid])
@@ -926,8 +907,8 @@ def optimize_findz(
                                     alpha_rh_obstacle_in=cfg.alpha_rh_obstacle_in,
                                     alpha_rh_obstacle_out=cfg.alpha_rh_obstacle_out,
                                     alpha_wrist=cfg.alpha_wrist,
-                                    prediction_scale=cfg.prediction_scale,
-                                    gradient_scale=cfg.gradient_scale,
+                                    # prediction_scale=cfg.prediction_scale,
+                                    # gradient_scale=cfg.gradient_scale,
                                     )
                 curr_loss_batched = loss_dict['total']
                 curr_loss = curr_loss_batched.mean()
@@ -947,7 +928,7 @@ def optimize_findz(
                 # Save result at the end of each step
                 current_trans = torch.stack([model.transl_x, model.transl_y, model.transl_z], 1)
                 current_orient = recompose_angle(model.global_orient1, model.global_orient2, model.global_orient3, 'aa')
-                dout = model.get_dout(current_trans, current_orient, model.z, model.w, model.angle, extras)
+                dout = model.get_dout(current_trans, current_orient, model.sbj_pose, model.wrist_global_orient, model.wrist_transl, model.hand_pose, extras)
                 dout = {k: dout[k].detach() for k in dout.keys()}
                 curr_res = {'transl_init': transl_init, 'global_orient_init': global_orient_init,
                             'pose_final': dout['pose_body'], 'transl_final': dout['transl'],
@@ -965,7 +946,6 @@ def optimize_findz(
 
         # (*) Save / make replacement for best model (z, w, transl, orient) for each batch element.
         replace = (loss_batched < best_loss).to(device)   # (bs)
-        best_angle = torch.where(replace[:, None], model.angle, best_angle)
         best_go1, best_go2, best_go3 = torch.where(replace, model.global_orient1, best_go1), torch.where(replace, model.global_orient2, best_go2), torch.where(replace, model.global_orient3, best_go3)
         best_t1, best_t2, best_t3 = torch.where(replace, model.transl_x, best_t1), torch.where(replace, model.transl_y, best_t2), torch.where(replace, model.transl_z, best_t3)
         best_sbj_pose = torch.where(replace[:, None], model.sbj_pose, best_sbj_pose)
@@ -1005,6 +985,17 @@ def optimize_findz(
             model.losses.sbj_m.body_pose = nn.Parameter(model.losses.sbj_m.body_pose[half_good], requires_grad=True)
             model.losses.sbj_m.transl = nn.Parameter(model.losses.sbj_m.transl[half_good], requires_grad=True)
 
+            model.sbj_pose = nn.Parameter(model.sbj_pose[half_good].data, requires_grad=True)
+            model.transl_x = nn.Parameter(model.transl_x[half_good].data, requires_grad=True)
+            model.transl_y = nn.Parameter(model.transl_y[half_good].data, requires_grad=True)
+            model.transl_z = nn.Parameter(model.transl_z[half_good].data, requires_grad=True)
+            model.global_orient1 = nn.Parameter(model.global_orient1[half_good].data, requires_grad=True)
+            model.global_orient2 = nn.Parameter(model.global_orient2[half_good].data, requires_grad=True)
+            model.global_orient3 = nn.Parameter(model.global_orient3[half_good].data, requires_grad=True)
+            model.hand_pose = nn.Parameter(model.hand_pose[half_good].data, requires_grad=True)
+            model.wrist_transl = nn.Parameter(model.wrist_transl[half_good].data, requires_grad=True)
+            model.wrist_global_orient = nn.Parameter(model.wrist_global_orient[half_good].data, requires_grad=True)
+
 
             for sid in range(len(stages)):
                 losses_stages_total[sid] = losses_stages_total[sid][:, :, half_good]
@@ -1013,7 +1004,6 @@ def optimize_findz(
 
             bs = new_batch_size
             best_loss = best_loss[half_good]
-            best_angle = best_angle[half_good]
             best_go1, best_go2, best_go3 = best_go1[half_good], best_go2[half_good], best_go3[half_good]
             best_t1, best_t2, best_t3 = best_t1[half_good], best_t2[half_good], best_t3[half_good]
             best_sbj_pose =  best_sbj_pose[half_good]
@@ -1028,7 +1018,7 @@ def optimize_findz(
 
 
     # Decode to save final results.
-    dout = model.get_dout(best_transl, best_orient, best_angle, 
+    dout = model.get_dout(best_transl, best_orient,
                           best_sbj_pose, best_wrist_global_orient, best_wrist_transl, best_hand_pose, 
                           extras)
     best_loss_dict = {k: v.cpu().detach() for k,v in best_loss_dict.items()}    # dict with keys ['total', 'lowermost_loss', 'rh_match_loss', 'obstacle_loss_in', 'obstacle_loss_out', 'gaze_loss'] -- each value of size (bs,

@@ -5,10 +5,10 @@ save_every_step: False                                                          
 model_name: 'flex'
 bs: 500
 # --- PATH: Datasets & Meshes --- #
-smplx_dir: './dataset/smplx_models'
-mano_dir: './dataset/smplx_models/mano'
-obj_meshes_dir: './dataset/obj/contact_meshes/'
-obj_dir: './dataset/obj/obj_info.npy'
+smplx_dir: './body_utils/body_models'
+mano_dir: './body_utils/body_models/mano'
+obj_meshes_dir: './dataset/contact_meshes/'
+# obj_dir: './dataset/obj/obj_info.npy'
 sbj_verts_region_map_pth: './dataset/sbj/sbj_verts_region_mapping.npy'
 mano2smplx_verts_ids: './dataset/sbj/MANO_SMPLX_vertex_ids.npy'
 interesting_pth: './dataset/sbj/interesting.npz'
@@ -41,18 +41,16 @@ subsample_sbj: True                                                             
 n_iter: 500                                                                        # Number of iterations of optimization
 # --- POSE-GROUND PRIOR --- #
 pgprior: True                                                                    # Whether to use pose-prior loss or not (turn off for baseline)
-best_pgprior: './pretrained_models/pgp.pth'                                                                  # Path to pretrained pose-ground prior
+best_pgprior: './pretrained_model/pgp.pth'                                                                  # Path to pretrained pose-ground prior
 height: 'transl_z'                                                                # either of 'transl_z' or 'pelvis_z' - depending on what pretrained model is loaded
 # --- STAGEWISE TRAINING --- #
 num_stagewise: '1'                                                                # Number of optimization iters for different stages
 params_stagewise: 'tgpwrh'                                                        # t: transl, g: global orient, p: sbj_pose, w: wrist transl, r: wrist orient, h: hand pose
 lrs_stagewise: '5e-2'                                                             # Learning rate for different stages of optimization
 # --- LATENT SPACE TRAINING --- #
-latent_lr: 5e-2                                                                 # Common learning rate for latent-based optimization (Roshi's paper)
+latent_lr: 0.05                                                                 # Common learning rate for latent-based optimization (Roshi's paper)
 lr_mlp_divisor: 10.0                                                            # Learning rate for MLP is divided by this factor
 latent_params: 'tgpwrha'
-# prediction_scale: field(default_factory=lambda:
-#     {'z': 5, 'transl': 10, 'orient': 20, 'w': 1, 'angle': 20})                          # Scale for different parameters in latent space
-# gradient_scale: field(default_factory=lambda:
-#     {'z': 10, 'transl': 0.3, 'orient': 1, 'w': 1, 'angle': 1})                          # Scale for different gradients in latent space
-# iteration_filter: [100, 200, 300]
+# prediction_scale: {'transl': 10, 'orient': 20, 'w': 0, 'angle': 20}                          # Scale for different parameters in latent space
+# gradient_scale: {'transl': 0.3, 'orient': 1, 'w': 0, 'angle': 1}                          # Scale for different gradients in latent space
+iteration_filter: [100, 150, 200, 250, 300]
