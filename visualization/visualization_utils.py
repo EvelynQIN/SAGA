@@ -53,7 +53,7 @@ def get_body_model(body_model_path, type, gender, batch_size,device='cuda',v_tem
     # body_model_path = '../body_utils/body_models'
     body_model = smplx.create(body_model_path, model_type=type,
                                     gender=gender, ext='npz',
-                                    num_pca_comps=24,
+                                    num_pca_comps=45,
                                     create_global_orient=True,
                                     create_body_pose=True,
                                     create_betas=True,
