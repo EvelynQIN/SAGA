@@ -17,7 +17,7 @@ sbj_faces_simplified: './dataset/sbj/faces_simplified.npy'
 adj_matrix_orig: './dataset/sbj/adj_matrix_original.npy'
 adj_matrix_simplified: './dataset/sbj/adj_matrix_simplified.npy'
 # --- TTO --- #
-topk: 10                                                                           # how many top results to return
+topk: 5                                                                           # how many top results to return
 std: -1                                                                           # -1 means random sample, anything else will sample those many SDs away from mean
 save_all_meshes: False                                                           # Save all meshes of run.py (should be set to True for debugging only)
 alpha_rh_match: 20.0                                                             # factor to weigh right-hand matching loss term

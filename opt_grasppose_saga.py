@@ -307,9 +307,11 @@ class Optimize():
         # a_inits = a_inits.to(self.device)
 
         # initialize body params using the fitting results from saga opt
-        sbj_pose_init = torch.FloatTensor(fitting_results['body']['body_pose']).repeat(bs, 1).to(self.device) # (bs, 63)              
-        wrist_global_orient_init =  torch.FloatTensor(fitting_results['body']['wrist_joint_global_orient']).repeat(bs, 1).to(self.device) # (bs, 3)            
-        wrist_transl_init = torch.FloatTensor(fitting_results['body']['wrist_joint_transl']).repeat(bs, 1).to(self.device) # (bs, 3)          
+        sbj_pose_init = torch.FloatTensor(fitting_results['body']['body_pose']).repeat(bs, 1).to(self.device) # (bs, 63)   
+        wrist_transl_init = (test_pose[0] + torch.rand(bs, 3) * 0.5).to(self.device) # (bs, 3) 
+        wrist_global_orient_init = recompose_angle(torch.rand(bs) * math.pi, torch.zeros(bs), torch.ones(bs) * 1.5, 'aa').to(self.device)      
+        # wrist_global_orient_init =  torch.FloatTensor(fitting_results['body']['wrist_joint_global_orient']).repeat(bs, 1).to(self.device) # (bs, 3)            
+        # wrist_transl_init = torch.FloatTensor(fitting_results['body']['wrist_joint_transl']).repeat(bs, 1).to(self.device) # (bs, 3)          
         hand_pose_init = torch.FloatTensor(fitting_results['body']['right_hand_pose']).repeat(bs, 1).to(self.device) # (bs, 45)          
 
         params_init = {
