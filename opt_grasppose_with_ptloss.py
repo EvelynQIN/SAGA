@@ -12,7 +12,7 @@ from tqdm import tqdm
 
 from utils.cfg_parser import Config
 from utils.utils import makelogger, makepath, rotmat2aa
-from WholeGraspPose.models.fittingop_flex import FittingOP
+from WholeGraspPose.models.fittingop_with_ptloss import FittingOP
 from WholeGraspPose.models.objectmodel import ObjectModel
 from WholeGraspPose.trainer import Trainer
 
