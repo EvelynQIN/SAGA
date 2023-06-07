@@ -81,13 +81,6 @@ SAGA
     └───pgp.pth (from flex, group prior)
 ```
 
-
-## Train
-### First Stage: WholeGrasp-VAE training
-```
-python train_grasppose.py --data_path ./dataset/GraspPose --gender male --exp_name male
-```
-
 ## Inference
 ### WholeGrasp-VAE sampling + SAGA GraspPose-Opt + FLEX opt
 ```
