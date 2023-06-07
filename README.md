@@ -1,27 +1,6 @@
 <h1 align="center">
-SAGA: Stochastic Whole-Body Grasping with Contact
+SAGA + FLEX
 </h1>
-
-> [**SAGA: Stochastic Whole-Body Grasping with Contact**](https://jiahaoplus.github.io/SAGA/saga.html)  
-> **ECCV 2022**  
-> Yan Wu*, Jiahao Wang*, Yan Zhang, Siwei Zhang, Otmar Hilliges, Fisher Yu, Siyu Tang
-
-## Contents
-- [Installation](https://github.com/JiahaoPlus/SAGA#installation)
-- [Dataset Preparation](https://github.com/JiahaoPlus/SAGA#Dataset)
-- [Pretrained models](https://github.com/JiahaoPlus/SAGA#pretrained-models)
-- [Train](https://github.com/JiahaoPlus/SAGA#train)
-- [Grasping poses and motions generation for given object](https://github.com/JiahaoPlus/SAGA#inference) (object position and orientation can be customized)
-- [Visualization](https://github.com/JiahaoPlus/SAGA#visualization)
-
-## Installation
-- <strong>Packages</strong>
-    - python>=3.8  
-    - pytorch==1.12.1  
-    - [human-body-prior](https://pypi.org/project/human-body-prior/)  
-    - [SMPLX](https://github.com/vchoutas/smplx)  
-    - [Chamfer Distance](https://github.com/otaheri/chamfer_distance)  
-    - Open3D
 
 - <strong>Body Models</strong>  
 Download [SMPL-X body model and vposer v1.0 model](https://smpl-x.is.tue.mpg.de/index.html) and put them under /body_utils/body_models folder as below:
