@@ -354,6 +354,7 @@ class FittingOP:
                         tmp_smplxparams['wrist_joint_transl'] = body_param['wrist_joint_transl'].detach()
                         tmp_smplxparams['wrist_joint_global_orient'] = tmp_smplxparams['body_pose'][:, -3:]# (b, 3)
                         tmp_smplxparams['vpose_rec'] = copy.deepcopy(self.vpose_rec).detach() # (b, 32)
+                        tmp_smplxparams['rhand_verts_rec'] = rhand_verts_rec.detach() # (b, 778, 3)
 
                         tmp_markers_fit = markers_fit
                         tmp_info = '[stage{:d}] iter={:d}, loss:{:s}, verts_info:{:s}'.format(ss,
@@ -392,6 +393,7 @@ class FittingOP:
                 smplxparams['wrist_joint_transl'] = body_param['wrist_joint_transl'].detach()
                 smplxparams['wrist_joint_global_orient'] = smplxparams['body_pose'][:, -3:]# (b, 3)
                 smplxparams['vpose_rec'] = copy.deepcopy(self.vpose_rec).detach() # (b, 32)
+                smplxparams['rhand_verts_rec'] = rhand_verts_rec.detach()
                 # print('handpose:', self.hand_pose)
 
                 # print(smplxparams['right_hand_pose'])

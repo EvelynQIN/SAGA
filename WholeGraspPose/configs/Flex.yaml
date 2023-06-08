@@ -20,14 +20,14 @@ adj_matrix_simplified: './dataset/sbj/adj_matrix_simplified.npy'
 topk: 5                                                                           # how many top results to return
 std: -1                                                                           # -1 means random sample, anything else will sample those many SDs away from mean
 save_all_meshes: False                                                           # Save all meshes of run.py (should be set to True for debugging only)
-alpha_rh_match: 20.0                                                             # factor to weigh right-hand matching loss term
+alpha_rh_match: 30.0                                                             # factor to weigh right-hand matching loss term
 rh_match_type: 'verts'                                                           # joints / verts -- determines matching loss criteria
 alpha_interesting_verts: 2.0                                                    # factor to weigh interesting vertices loss term
 alpha_lowermost: 0.0                                                            # factor to weigh lowermost loss term
 alpha_obstacle_in: 1000.0                                                        # factor to weigh human-obstacle penetration loss term
-alpha_obstacle_out: 0.0                                                         # factor to weigh human-obstacle faraway loss term for the (opposite of penetration)
-alpha_rh_obstacle_in: 0.0
-alpha_rh_obstacle_out:  0.0
+alpha_obstacle_out: 10.0                                                         # factor to weigh human-obstacle faraway loss term for the (opposite of penetration)
+# alpha_rh_obstacle_in: 0.0
+# alpha_rh_obstacle_out:  0.0
 alpha_wrist: 0.01
 intersection_thresh: 0.005                                                        # threshold for new intersection loss
 obstacle_sbj2obj_extra: 'connected_components'                                                        # 'connected_components' / '' (i.e.,none) -- only valid for human, not rhand
@@ -45,8 +45,8 @@ best_pgprior: './pretrained_model/pgp.pth'                                      
 height: 'transl_z'                                                                # either of 'transl_z' or 'pelvis_z' - depending on what pretrained model is loaded
 # --- STAGEWISE TRAINING --- #
 num_stagewise: '1'                                                                # Number of optimization iters for different stages
-params_stagewise: 'tgzwrh'                                                        # t: transl, g: global orient, z:vpose_rec, w: wrist transl, r: wrist orient, h: hand pose
-lrs_stagewise: '1e-3'                                                             # Learning rate for different stages of optimization
+params_stagewise: 'tgz'                                                        # t: transl, g: global orient, z:vpose_rec, w: wrist transl, r: wrist orient, h: hand pose
+lrs_stagewise: '5e-3'                                                             # Learning rate for different stages of optimization
 # --- LATENT SPACE TRAINING --- #
 latent_lr: 0.05                                                                 # Common learning rate for latent-based optimization (Roshi's paper)
 lr_mlp_divisor: 10.0                                                            # Learning rate for MLP is divided by this factor
