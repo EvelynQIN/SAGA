@@ -84,7 +84,7 @@ SAGA
 ## Inference
 ### WholeGrasp-VAE sampling + SAGA GraspPose-Opt + FLEX opt
 ```
-python opt_grasppose_flex.py --exp_name sage_with_flex_test --gender male --pose_ckpt_path pretrained_model/male_grasppose_model.pt --n_rand_samples_per_object 1 --object camera
+python opt_grasppose_flex.py --exp_name saga_with_flex_test --gender male --pose_ckpt_path pretrained_model/male_grasppose_model.pt --n_rand_samples_per_object 1 --object camera
 ```
 
 ## Visualization
