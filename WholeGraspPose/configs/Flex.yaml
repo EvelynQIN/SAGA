@@ -45,12 +45,13 @@ best_pgprior: './pretrained_model/pgp.pth'                                      
 height: 'transl_z'                                                                # either of 'transl_z' or 'pelvis_z' - depending on what pretrained model is loaded
 # --- STAGEWISE TRAINING --- #
 num_stagewise: '1'                                                                # Number of optimization iters for different stages
-params_stagewise: 'tgpwrh'                                                        # t: transl, g: global orient, p: sbj_pose, w: wrist transl, r: wrist orient, h: hand pose
-lrs_stagewise: '5e-2'                                                             # Learning rate for different stages of optimization
+params_stagewise: 'tgzwrh'                                                        # t: transl, g: global orient, z:vpose_rec, w: wrist transl, r: wrist orient, h: hand pose
+lrs_stagewise: '1e-3'                                                             # Learning rate for different stages of optimization
 # --- LATENT SPACE TRAINING --- #
 latent_lr: 0.05                                                                 # Common learning rate for latent-based optimization (Roshi's paper)
 lr_mlp_divisor: 10.0                                                            # Learning rate for MLP is divided by this factor
 latent_params: 'tgpwrha'
 # prediction_scale: {'transl': 10, 'orient': 20, 'w': 0, 'angle': 20}                          # Scale for different parameters in latent space
-# gradient_scale: {'transl': 0.3, 'orient': 1, 'w': 0, 'angle': 1}                          # Scale for different gradients in latent space
+gradient_scale: {'transl': 0.3, 'orient': 1, 'vpose_rec': 1, wrist_transl': 0.3, 'wrist orient': 0.3, 'hand_pose': 0.3}                          # Scale for different gradients in latent space
 iteration_filter: [100, 150, 200, 250, 300]
+device: 'cuda'

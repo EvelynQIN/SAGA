@@ -13,4 +13,4 @@
 module load gcc/8.2.0 python_gpu/3.10.4 boost/1.74.0 eth_proxy open3d/0.9.0
 source /cluster/scratch/yaqqin/venvs/flex_venv/bin/activate
 module load gcc/8.2.0 python_gpu/3.10.4 boost/1.74.0 eth_proxy open3d/0.9.0
-python opt_grasppose_flex.py --exp_name saga_16d_with_ptloss_table_all --gender male --pose_ckpt_path pretrained_model/male_grasppose_model.pt --n_rand_samples_per_object 1 --receptacle_name receptacle_aabb_Tbl2_Top2_frl_apartment_table_02 --ornt_name all
+python opt_grasppose_flex.py --exp_name sage_with_flex_latentz --gender male --pose_ckpt_path pretrained_model/male_grasppose_model.pt --n_rand_samples_per_object 1 --object camera
